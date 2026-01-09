@@ -93,7 +93,6 @@ body {
 }
 
 /* Chat History */
-
 .chat-box {
   max-height: 300px;
   overflow-y: auto;
@@ -115,14 +114,13 @@ body {
 }
 
 /* options display */
-
 .quick-options {
   margin-bottom: 1.5rem;
 }
 
 .quick-options h3 {
   margin-bottom: 0.75rem;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   color: #111827;
 }
 
@@ -235,6 +233,4 @@ body {
     max-height: 250px;
   }
 }
-
-
 
