@@ -1,10 +1,7 @@
-//tracking travel interests
+// ---------------- Travel Interests ----------------
 let selectedInterests = [];
 
-//start and end date
-let datePickerMode = null;
-
-//function for option button
+// Option button toggle
 document.querySelectorAll('.option-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     this.classList.toggle('active');
@@ -12,19 +9,13 @@ document.querySelectorAll('.option-btn').forEach(btn => {
     
     if (this.classList.contains('active')) {
       selectedInterests.push(interest);
-      this.style.background = '#2563eb';
-      this.style.color = '#ffffff';
-      this.style.borderColor = '#2563eb';
     } else {
       selectedInterests = selectedInterests.filter(i => i !== interest);
-      this.style.background = '#ffffff';
-      this.style.color = '#1f2933';
-      this.style.borderColor = '#d1d5db';
     }
   });
 });
 
-//function for send button
+// ---------------- Send Button ----------------
 document.getElementById('sendBtn').addEventListener('click', handleSendMessage);
 document.getElementById('userInput').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') handleSendMessage();
@@ -40,17 +31,14 @@ function handleSendMessage() {
 
   if (!message) return;
 
-  //validation for required fields
   if (!destination || !dates || !budget) {
     alert('Please fill in destination, dates, and budget to continue.');
     return;
   }
 
-  //display user message
   displayMessage(message, 'user');
   userInput.value = '';
 
-  //generate bot response
   const botResponse = generateItinerary(destination, dates, budget, transport, selectedInterests, message);
   setTimeout(() => displayMessage(botResponse, 'bot'), 500);
 }
@@ -76,72 +64,55 @@ function generateItinerary(destination, dates, budget, transport, interests, use
   Special requests: ${userMessage}. Your personalized itinerary is being generated...`;
 }
 
-//calendar popup
+// ---------------- Tabs JS ----------------
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabButtons.forEach(b => b.classList.remove('active'));
+    tabContents.forEach(tc => tc.classList.remove('active'));
+
+    btn.classList.add('active');
+    const tabId = btn.dataset.tab;
+    document.getElementById(`${tabId}-tab`).classList.add('active');
+  });
+});
+
+// ---------------- Explore Destinations Grid ----------------
+const exploreGrid = document.querySelector('.explore-placeholder');
+
+const cities = [
+  "Paris","Tokyo","New York","London","Barcelona","Rome","Amsterdam","Berlin","Sydney","Dubai",
+  "Bangkok","Singapore","Istanbul","Prague","Vienna","Hong Kong","Lisbon","Seoul","Los Angeles","Chicago",
+  "Rio de Janeiro","Cape Town","Vancouver","Mexico City","Buenos Aires","Moscow","Athens","Cairo","Budapest","Miami"
+];
+
+cities.forEach(city => {
+  const btn = document.createElement('button');
+  btn.textContent = city;
+  btn.addEventListener('click', () => {
+    document.getElementById('destination').value = city;
+    document.querySelector('.tab-btn[data-tab="plan"]').click();
+  });
+  exploreGrid.appendChild(btn);
+});
+
+// ---------------- Calendar Popup ----------------
 function initDatePicker() {
   const datesInput = document.getElementById('dates');
-  datesInput.addEventListener('click', openCalendar);
+  datesInput.addEventListener('click', openStartCalendar);
 }
 
-function openCalendar() {
-  const overlay = document.createElement('div');
-  overlay.className = 'calendar-overlay';
-  
-  const calendarPopup = document.createElement('div');
-  calendarPopup.className = 'calendar-popup';
-  
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-  
-  calendarPopup.innerHTML = generateCalendarHTML(currentMonth, currentYear);
-  
-  overlay.appendChild(calendarPopup);
-  document.body.appendChild(overlay);
-  
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) {
-      overlay.remove();
-    }
-  });
-  
-  document.querySelectorAll('.calendar-nav-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      overlay.remove();
-      let newMonth = currentMonth + (this.dataset.direction === 'next' ? 1 : -1);
-      let newYear = currentYear;
-      
-      if (newMonth > 11) {
-        newMonth = 0;
-        newYear++;
-      } else if (newMonth < 0) {
-        newMonth = 11;
-        newYear--;
-      }
-      
-      openCalendarMonth(newMonth, newYear);
-    });
-  });
-  
-  // Selecting start date from calendar
-  document.querySelectorAll('.calendar-day').forEach(day => {
-    day.addEventListener('click', function() {
-      if (this.textContent) {
-        const startDate = `${currentMonth + 1}/${this.textContent}/${currentYear}`;
-        const datesInput = document.getElementById('dates');
-        datesInput.value = startDate;
-        
-        // Show prompt for end date
-        setTimeout(() => {
-          alert('Now select your end date');
-          overlay.remove();
-          setTimeout(() => openEndCalendar(), 300);
-        }, 200);
-      }
-    });
-  });
+function openStartCalendar() {
+  openCalendar('start');
 }
 
 function openEndCalendar() {
+  openCalendar('end');
+}
+
+function openCalendar(mode) {
   const overlay = document.createElement('div');
   overlay.className = 'calendar-overlay';
   
@@ -149,50 +120,60 @@ function openEndCalendar() {
   calendarPopup.className = 'calendar-popup';
   
   const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
   
   calendarPopup.innerHTML = generateCalendarHTML(currentMonth, currentYear);
-  
   overlay.appendChild(calendarPopup);
   document.body.appendChild(overlay);
-  
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) {
-      overlay.remove();
-    }
-  });
-  
-  // Calendar navigation for end date
-  document.querySelectorAll('.calendar-nav-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      overlay.remove();
-      let newMonth = currentMonth + (this.dataset.direction === 'next' ? 1 : -1);
-      let newYear = currentYear;
-      
-      if (newMonth > 11) {
-        newMonth = 0;
-        newYear++;
-      } else if (newMonth < 0) {
-        newMonth = 11;
-        newYear--;
-      }
-      
-      openEndCalendarMonth(newMonth, newYear);
+
+  function refreshCalendar(month, year) {
+    calendarPopup.innerHTML = generateCalendarHTML(month, year);
+    attachDayListeners();
+    attachNavListeners();
+  }
+
+  function attachNavListeners() {
+    document.querySelectorAll('.calendar-nav-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        let newMonth = currentMonth + (this.dataset.direction === 'next' ? 1 : -1);
+        let newYear = currentYear;
+
+        if (newMonth > 11) { newMonth = 0; newYear++; }
+        if (newMonth < 0) { newMonth = 11; newYear--; }
+
+        currentMonth = newMonth;
+        currentYear = newYear;
+        refreshCalendar(currentMonth, currentYear);
+      });
     });
-  });
-  
-  // Selecting end date from calendar
-  document.querySelectorAll('.calendar-day').forEach(day => {
-    day.addEventListener('click', function() {
-      if (this.textContent) {
-        const endDate = `${currentMonth + 1}/${this.textContent}/${currentYear}`;
+  }
+
+  function attachDayListeners() {
+    document.querySelectorAll('.calendar-day').forEach(day => {
+      day.addEventListener('click', function() {
+        if (!this.textContent) return;
+        const selectedDate = `${currentMonth + 1}/${this.textContent}/${currentYear}`;
         const datesInput = document.getElementById('dates');
-        const startDate = datesInput.value;
-        datesInput.value = `${startDate} - ${endDate}`;
-        overlay.remove();
-      }
+
+        if (mode === 'start') {
+          datesInput.value = selectedDate;
+          overlay.remove();
+          setTimeout(() => openEndCalendar(), 200);
+        } else if (mode === 'end') {
+          const startDate = datesInput.value;
+          datesInput.value = `${startDate} - ${selectedDate}`;
+          overlay.remove();
+        }
+      });
     });
+  }
+
+  attachNavListeners();
+  attachDayListeners();
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
   });
 }
 
@@ -201,132 +182,25 @@ function generateCalendarHTML(month, year) {
     'July', 'August', 'September', 'October', 'November', 'December'];
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
-  let html = `
-    <div style="padding: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <button class="calendar-nav-btn" data-direction="prev">← Prev</button>
-        <h3 style="margin: 0; color: #2563eb;">${monthNames[month]} ${year}</h3>
-        <button class="calendar-nav-btn" data-direction="next">Next →</button>
-      </div>
-      <div class="calendar-grid">
-  `;
-  
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  dayLabels.forEach(day => {
-    html += `<div style="font-weight: 600; text-align: center; padding: 0.5rem;">${day}</div>`;
+
+  let html = `<div style="padding:1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <button class="calendar-nav-btn" data-direction="prev">← Prev</button>
+      <h3 style="margin:0; color:#2563eb;">${monthNames[month]} ${year}</h3>
+      <button class="calendar-nav-btn" data-direction="next">Next →</button>
+    </div>
+    <div class="calendar-grid">`;
+
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+    html += `<div style="font-weight:600;text-align:center;padding:0.5rem;">${d}</div>`;
   });
-  
-  for (let i = 0; i < firstDay; i++) {
-    html += '<div></div>';
-  }
-  
-  for (let day = 1; day <= daysInMonth; day++) {
-    html += `<div class="calendar-day">${day}</div>`;
-  }
-  
+
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+  for (let day = 1; day <= daysInMonth; day++) html += `<div class="calendar-day">${day}</div>`;
+
   html += `</div></div>`;
   return html;
 }
 
-function openCalendarMonth(month, year) {
-  const overlay = document.createElement('div');
-  overlay.className = 'calendar-overlay';
-  
-  const calendarPopup = document.createElement('div');
-  calendarPopup.className = 'calendar-popup';
-  calendarPopup.innerHTML = generateCalendarHTML(month, year);
-  
-  overlay.appendChild(calendarPopup);
-  document.body.appendChild(overlay);
-  
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) overlay.remove();
-  });
-  
-  //calendar navigation
-  document.querySelectorAll('.calendar-nav-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      overlay.remove();
-      let newMonth = month + (this.dataset.direction === 'next' ? 1 : -1);
-      let newYear = year;
-      
-      if (newMonth > 11) {
-        newMonth = 0;
-        newYear++;
-      } else if (newMonth < 0) {
-        newMonth = 11;
-        newYear--;
-      }
-      
-      openCalendarMonth(newMonth, newYear);
-    });
-  });
-  
-  //selecting start date
-  document.querySelectorAll('.calendar-day').forEach(day => {
-    day.addEventListener('click', function() {
-      if (this.textContent) {
-        const startDate = `${month + 1}/${this.textContent}/${year}`;
-        const datesInput = document.getElementById('dates');
-        datesInput.value = startDate;
-        
-        setTimeout(() => {
-          alert('Now select your end date');
-          overlay.remove();
-          setTimeout(() => openEndCalendar(), 300);
-        }, 200);
-      }
-    });
-  });
-}
-
-function openEndCalendarMonth(month, year) {
-  const overlay = document.createElement('div');
-  overlay.className = 'calendar-overlay';
-  
-  const calendarPopup = document.createElement('div');
-  calendarPopup.className = 'calendar-popup';
-  calendarPopup.innerHTML = generateCalendarHTML(month, year);
-  
-  overlay.appendChild(calendarPopup);
-  document.body.appendChild(overlay);
-  
-  overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) overlay.remove();
-  });
-  
-  document.querySelectorAll('.calendar-nav-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      overlay.remove();
-      let newMonth = month + (this.dataset.direction === 'next' ? 1 : -1);
-      let newYear = year;
-      
-      if (newMonth > 11) {
-        newMonth = 0;
-        newYear++;
-      } else if (newMonth < 0) {
-        newMonth = 11;
-        newYear--;
-      }
-      
-      openEndCalendarMonth(newMonth, newYear);
-    });
-  });
-  
-  //selecting end date
-  document.querySelectorAll('.calendar-day').forEach(day => {
-    day.addEventListener('click', function() {
-      if (this.textContent) {
-        const endDate = `${month + 1}/${this.textContent}/${year}`;
-        const datesInput = document.getElementById('dates');
-        const startDate = datesInput.value;
-        datesInput.value = `${startDate} - ${endDate}`;
-        overlay.remove();
-      }
-    });
-  });
-}
-
-//initialize calendar on page load
+// Initialize calendar
 document.addEventListener('DOMContentLoaded', initDatePicker);

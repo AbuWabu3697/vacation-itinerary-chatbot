@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
   <title>TripBuddy | AI Travel Planner</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -13,135 +12,140 @@
 
     <!-- header  -->
     <header class="header">
-      <!-- website name -->
       <h1>TripBuddy ✈️</h1>
       <p class="subtitle">
-        <!-- general website description  -->
         Your personal assistant for building the perfect vacation itinerary
       </p>
     </header>
 
-    <!-- user section -->
-    <section class="trip-setup">
-      <h2>Plan Your Trip</h2>
+    <!-- tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="plan">Plan</button>
+      <button class="tab-btn" data-tab="explore">Explore Destinations</button>
+    </div>
 
-      <div class="setup-grid">
-        <div class="setup-item">
-          <label for="destination">Destination</label>
-          <input type="text" id="destination" placeholder="e.g. Paris, France">
-        </div>
+    <!-- PLAN TAB -->
+    <div id="plan-tab" class="tab-content active">
 
-        <div class="setup-item">
-          <label for="dates">Travel Dates</label>
-          <input type="text" id="dates" placeholder="e.g. June 10 - June 17">
-        </div>
+      <!-- user section -->
+      <section class="trip-setup">
+        <h2>Plan Your Trip</h2>
 
-        <!-- budget range section -->
-        <div class="setup-item">
-          <label for="budget">Budget Range (USD)</label>
-          <select id="budget">
-            <option value="">Select a budget</option>
-            <option value="0-500">$0 - $500</option>
-            <option value="500-1000">$500 - $1,000</option>
-            <option value="1000-2000">$1,000 - $2,000</option>
-            <option value="2000-4000">$2,000 - $5,000</option>
-            <option value="2000-4000">$5,000 - $10,000</option>
-            <option value="2000-4000">$10,000 - $20,000</option>
-            <option value="2000-4000">$20,000+</option>
-            <option value="4000+">No Budget</option>
-          </select>
-        </div>
+        <div class="setup-grid">
+          <div class="setup-item">
+            <label for="destination">Destination</label>
+            <input type="text" id="destination" placeholder="e.g. Paris, France">
+          </div>
 
-        <div class="setup-item">
-          <label for="transport">Transportation Preference</label>
-          <select id="transport">
-            <option>Public Transit</option>
-            <option>Rental Car</option>
-            <option>Rideshare</option>
-            <option>No Preference</option>
-          </select>
-        </div>
-      </div>
-    </section>
+          <div class="setup-item">
+            <label for="dates">Travel Dates</label>
+            <input type="text" id="dates" placeholder="e.g. June 10 - June 17">
+          </div>
 
-    <!-- chatbot -->
-    <main class="chat-container">
+          <div class="setup-item">
+            <label for="budget">Budget Range (USD)</label>
+            <select id="budget">
+              <option value="">Select a budget</option>
+              <option value="0-500">$0 - $500</option>
+              <option value="500-1000">$500 - $1,000</option>
+              <option value="1000-2000">$1,000 - $2,000</option>
+              <option value="2000-4000">$2,000 - $5,000</option>
+              <option value="2000-4000">$5,000 - $10,000</option>
+              <option value="2000-4000">$10,000 - $20,000</option>
+              <option value="2000-4000">$20,000+</option>
+              <option value="4000+">No Budget</option>
+            </select>
+          </div>
 
-      <!-- Chat History -->
-      <div class="chat-box" id="chatBox">
-      
-      </div>
-
-      <!-- automatic preferences -->
-      <section class="quick-options">
-        <h3>Travel Interests</h3>
-        <div class="option-buttons">
-          <button class="option-btn">🍽️ Food</button>
-          <button class="option-btn">🏛️ Sightseeing</button>
-          <button class="option-btn">🌲 Nature</button>
-          <button class="option-btn">🎉 Nightlife</button>
-          <button class="option-btn">🛍️ Shopping</button>
+          <div class="setup-item">
+            <label for="transport">Transportation Preference</label>
+            <select id="transport">
+              <option>Public Transit</option>
+              <option>Rental Car</option>
+              <option>Rideshare</option>
+              <option>No Preference</option>
+            </select>
+          </div>
         </div>
       </section>
 
-      <!-- user input -->
-      <div class="input-area">
-        <input
-          type="text"
-          id="userInput"
-          placeholder="Describe your ideal trip..."
-          aria-label="User message input"
-        />
-        <button id="sendBtn">Generate Plan</button>
-      </div>
+      <!-- chatbot -->
+      <main class="chat-container">
+        <div class="chat-box" id="chatBox"></div>
 
-    </main>
+        <section class="quick-options">
+          <h3>Travel Interests</h3>
+          <div class="option-buttons">
+            <button class="option-btn">🍽️ Food</button>
+            <button class="option-btn">🏛️ Sightseeing</button>
+            <button class="option-btn">🌲 Nature</button>
+            <button class="option-btn">🎉 Nightlife</button>
+            <button class="option-btn">🛍️ Shopping</button>
+          </div>
+        </section>
 
-    <!-- itinerary output -->
-    <section class="itinerary-preview">
-      <h2>Itinerary Preview</h2>
+        <div class="input-area">
+          <input type="text" id="userInput" placeholder="Describe your ideal trip..." aria-label="User message input"/>
+          <button id="sendBtn">Generate Plan</button>
+        </div>
+      </main>
 
-      <div class="day-card">
-        <h3>Day 1</h3>
-        <ul>
-          <li><strong>8:00 AM - 10:00 AM:</strong> Arrive at destination & hotel check-in. Drop off luggage + freshen up.</li>
-          <li><strong>10:00 AM - 12:00 PM:</strong> Walk around local area to get familiar with surroundings.</li>
-          <li><strong>12:00 PM - 1:30 PM:</strong> Lunch at a recommended local restaurant specializing in regional cuisine.</li>
-          <li><strong>2:00 PM - 5:00 PM:</strong> Visit nearby landmarks or museums; enjoy guided tours or self-exploration.</li>
-          <li><strong>5:30 PM - 7:00 PM:</strong> Evening activity based on interests (cultural event, park stroll, or local performance).</li>
-          <li><strong>7:30 PM - 9:00 PM:</strong> Dinner at a popular local spot, sampling signature dishes.</li>
-        </ul>
-      </div>
+      <!-- itinerary output -->
+      <section class="itinerary-preview">
+        <h2>Itinerary Preview</h2>
 
-      <div class="day-card">
-        <h3>Day 2</h3>
-        <ul>
-          <li><strong>7:30 AM - 8:30 AM:</strong> Breakfast at the hotel.</li>
-          <li><strong>9:00 AM - 12:00 PM:</strong> Morning guided tour of city highlights, museums, or scenic spots.</li>
-         <li><strong>12:30 PM - 1:30 PM:</strong> Lunch at a local cuisine hotspot.</li>
-          <li><strong>2:00 PM - 5:00 PM:</strong> Afternoon outdoor activity or excursion (hiking, boat tour, or city exploration).</li>
-          <li><strong>5:30 PM - 6:30 PM:</strong> Relaxation break or spa visit to rest.</li>
-         <li><strong>7:00 PM - 8:30 PM:</strong> Dinner at a recommended restaurant.</li>
-          <li><strong>8:30 PM - 10:00 PM:</strong> Optional evening activity based on interests (night market, cultural show, nightlife).</li>
+        <div class="day-card">
+          <h3>Day 1</h3>
+          <ul>
+            <li><strong>8:00 AM - 10:00 AM:</strong> Arrive at destination & hotel check-in. Drop off luggage + freshen up.</li>
+            <li><strong>10:00 AM - 12:00 PM:</strong> Walk around local area to get familiar with surroundings.</li>
+            <li><strong>12:00 PM - 1:30 PM:</strong> Lunch at a recommended local restaurant specializing in regional cuisine.</li>
+            <li><strong>2:00 PM - 5:00 PM:</strong> Visit nearby landmarks or museums; enjoy guided tours or self-exploration.</li>
+            <li><strong>5:30 PM - 7:00 PM:</strong> Evening activity based on interests (cultural event, park stroll, or local performance).</li>
+            <li><strong>7:30 PM - 9:00 PM:</strong> Dinner at a popular local spot, sampling signature dishes.</li>
+          </ul>
+        </div>
 
-        </ul>
-      </div>
+        <div class="day-card">
+          <h3>Day 2</h3>
+          <ul>
+            <li><strong>7:30 AM - 8:30 AM:</strong> Breakfast at the hotel.</li>
+            <li><strong>9:00 AM - 12:00 PM:</strong> Morning guided tour of city highlights, museums, or scenic spots.</li>
+            <li><strong>12:30 PM - 1:30 PM:</strong> Lunch at a local cuisine hotspot.</li>
+            <li><strong>2:00 PM - 5:00 PM:</strong> Afternoon outdoor activity or excursion (hiking, boat tour, or city exploration).</li>
+            <li><strong>5:30 PM - 6:30 PM:</strong> Relaxation break or spa visit to rest.</li>
+            <li><strong>7:00 PM - 8:30 PM:</strong> Dinner at a recommended restaurant.</li>
+            <li><strong>8:30 PM - 10:00 PM:</strong> Optional evening activity based on interests (night market, cultural show, nightlife).</li>
+          </ul>
+        </div>
 
-      <!-- Day 3 -->
-       <div class="day-card">
-        <h3>Day 3</h3>
-        <ul>
-          <li><strong>7:00 AM - 8:00 AM:</strong> Early morning visit to a popular attraction or local market for shopping.</li>
-          <li><strong>8:30 AM - 9:30 AM:</strong> Breakfast at local cafe, trying traditional breakfast dishes.</li>
-          <li><strong>10:00 AM - 12:00 PM:</strong> Mid-morning cultural activity or workshop (cooking class, art session, or local history tour).</li>
-          <li><strong>12:30 PM - 1:30 PM:</strong> Lunch and short stroll or sightseeing near the hotel.</li>
-          <li><strong>2:00 PM - 3:00 PM:</strong> Last-minute shopping or visiting any remaining local spots of interest.</li>
-          <li><strong>3:30 PM - 4:00 PM:</strong> Check-out from hotel.</li>
-          <li><strong>4:00 PM:</strong> Travel home.</li>
-        </ul>
-      </div>
+        <div class="day-card">
+          <h3>Day 3</h3>
+          <ul>
+            <li><strong>7:00 AM - 8:00 AM:</strong> Early morning visit to a popular attraction or local market for shopping.</li>
+            <li><strong>8:30 AM - 9:30 AM:</strong> Breakfast at local cafe, trying traditional breakfast dishes.</li>
+            <li><strong>10:00 AM - 12:00 PM:</strong> Mid-morning cultural activity or workshop (cooking class, art session, or local history tour).</li>
+            <li><strong>12:30 PM - 1:30 PM:</strong> Lunch and short stroll or sightseeing near the hotel.</li>
+            <li><strong>2:00 PM - 3:00 PM:</strong> Last-minute shopping or visiting any remaining local spots of interest.</li>
+            <li><strong>3:30 PM - 4:00 PM:</strong> Check-out from hotel.</li>
+            <li><strong>4:00 PM:</strong> Travel home.</li>
+          </ul>
+        </div>
+      </section>
 
-    </section>
+    </div>
+
+    <!-- EXPLORE DESTINATIONS TAB -->
+    <div id="explore-tab" class="tab-content">
+      <section class="trip-setup">
+        <h2>Explore Destinations</h2>
+        <p>Need travel ideas? Check out some of the world's most popular destinations!</p>
+
+        <div class="explore-placeholder">
+          <!-- This is where the 3x10 city grid will go -->
+        </div>
+      </section>
+    </div>
 
   </div>
 
