@@ -80,7 +80,7 @@ tabButtons.forEach(btn => {
 });
 
 // ---------------- Explore Destinations Grid ----------------
-const exploreGrid = document.querySelector('.explore-placeholder');
+const exploreGrid = document.querySelector('.explore-placeholder') || document.getElementById('cityGrid');
 
 const cities = [
   "Paris","Tokyo","New York","London","Barcelona","Rome","Amsterdam","Berlin","Sydney","Dubai",
@@ -91,10 +91,12 @@ const cities = [
 cities.forEach(city => {
   const btn = document.createElement('button');
   btn.textContent = city;
+
   btn.addEventListener('click', () => {
     document.getElementById('destination').value = city;
-    document.querySelector('.tab-btn[data-tab="plan"]').click();
+    // NOTE: do NOT switch tabs here anymore
   });
+
   exploreGrid.appendChild(btn);
 });
 
