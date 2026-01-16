@@ -183,7 +183,7 @@ const cities = [
   {name: "Sydney", image: "https://wallpapercave.com/wp/wp2684726.jpg"},
   {name: "Dubai", image: "https://wallpaperaccess.com/full/1735114.jpg"},
   {name: "Bangkok", image: "https://www.tripsavvy.com/thmb/ZtwK0eWCSDo4DQjEGi-IupGJ2I0=/5472x3648/filters:no_upscale():max_bytes(150000):strip_icc()/wat-arun-temple-bangkok-5c461eee46e0fb00016fe445.jpg"},
-  {name: "Singapore", image: "https://tse3.mm.bing.net/th/id/OIP.d4BXWuPhEaobxhJHDsmpfgHaE8?rs=1&pid=ImgDetMain&o=7&rm=3"},
+  {name: "Singapore", image: "https://www.stokedtotravel.com/wp-content/uploads/2020/11/Singapore-1.jpg"},
   {name: "Istanbul", image: "https://media.istockphoto.com/photos/stanbul-turkey-picture-id458012057?b=1&k=20&m=458012057&s=170667a&w=0&h=zBrkAjxV8Ser_DKekq6g9EWuPgXsNc8qktI3rpwoj0g="},
   {name: "Prague", image: "https://www.siliconrepublic.com/wp-content/uploads/2018/06/Prague_shutterstock_696131494-718x523.jpg"},
   {name: "Vienna", image: "https://tse4.mm.bing.net/th/id/OIP._WIfrR7zlI-s-kI9G9jxlAHaEK?w=1440&h=810&rs=1&pid=ImgDetMain&o=7&rm=3"},
