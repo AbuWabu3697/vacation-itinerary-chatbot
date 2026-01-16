@@ -41,6 +41,8 @@ function handleSendMessage() {
 
   const botResponse = generateItinerary(destination, dates, budget, transport, selectedInterests, message);
   setTimeout(() => displayMessage(botResponse, 'bot'), 500);
+  searchFlights();
+  setTimeout(() => displayMessage(botResponse, 'bot'), 500);
 }
 
 function displayMessage(text, sender) {
@@ -57,6 +59,93 @@ function displayMessage(text, sender) {
   chatBox.appendChild(messageDiv);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
+
+function mdYToISO(mdY) {
+  // "2/1/2026" -> "2026-02-01"
+  const parts = mdY.trim().split("/");
+  if (parts.length !== 3) return null;
+
+  const [m, d, y] = parts.map(p => p.trim());
+  if (!m || !d || !y) return null;
+
+  const mm = String(parseInt(m, 10)).padStart(2, "0");
+  const dd = String(parseInt(d, 10)).padStart(2, "0");
+  return `${y}-${mm}-${dd}`;
+}
+
+function normalizeDatesForBackend(datesStr) {
+  // if it's already ISO, leave it
+  if (/\d{4}-\d{2}-\d{2}/.test(datesStr)) return datesStr;
+
+  // expected "M/D/YYYY - M/D/YYYY"
+  const parts = datesStr.split("-").map(s => s.trim());
+  if (parts.length < 2) return datesStr;
+
+  const startISO = mdYToISO(parts[0]);
+  const endISO = mdYToISO(parts[1]);
+
+  if (!startISO || !endISO) return datesStr;
+
+  return `${startISO} to ${endISO}`;
+}
+
+function parseBudgetMax(budgetValue) {
+  // "2000-4000" -> "4000"
+  if (!budgetValue) return "";
+  if (budgetValue.includes("+")) return ""; // treat "No Budget" as no max
+
+  const parts = budgetValue.split("-").map(s => s.trim());
+  if (parts.length === 2 && parts[1]) return parts[1];
+
+  // if it's already a number
+  return budgetValue;
+}
+
+const userInput = document.getElementById('userInput');
+async function searchFlights() {
+  const destination = document.getElementById('destination').value.trim();
+  const datesRaw = document.getElementById('dates').value.trim();
+  const dates = normalizeDatesForBackend(datesRaw);
+
+  const budgetRaw = document.getElementById('budget').value.trim();
+  const budget = parseBudgetMax(budgetRaw);
+  const transport = document.getElementById('transport').value.trim();
+  const message = userInput.value.trim();
+
+  const origin = "BOS";
+
+  const payload = {
+    origin,
+    destination,
+    dates,
+    budget,
+    transport,
+    message
+  };
+
+  const res = await fetch("/api/flights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  console.log("flight results:", data);
+
+  // 🔥 ADD THIS BLOCK RIGHT HERE
+  if (data.error) {
+    const msg = data.message ? ` (${data.message})` : "";
+    displayMessage("❌ " + data.error + msg, "bot");
+    return;
+  }
+
+  // ✅ If no error, continue rendering flights
+  displayMessage("✈️ Found " + data.offers.length + " flights!", "bot");
+
+  // TODO: format flight cards here
+}
+
+
 
 function generateItinerary(destination, dates, budget, transport, interests, userMessage) {
   return `Great! I'm planning a trip to ${destination} from ${dates} with a ${budget} budget. 
@@ -206,3 +295,119 @@ function generateCalendarHTML(month, year) {
 
 // Initialize calendar
 document.addEventListener('DOMContentLoaded', initDatePicker);
+
+function setFlightStatus(text) {
+  const el = document.getElementById("flightStatus");
+  if (el) el.textContent = text || "";
+}
+
+function fmtTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function stopsLabel(stops) {
+  if (stops === 0) return "Nonstop";
+  if (stops === 1) return "1 stop";
+  return `${stops} stops`;
+}
+
+// Your calendar currently outputs "M/D/YYYY - M/D/YYYY"
+// Convert to "YYYY-MM-DD to YYYY-MM-DD"
+function toISODate(mdyyyy) {
+  // mdyyyy like "2/10/2026"
+  const [m, d, y] = mdyyyy.split("/").map(s => s.trim());
+  if (!m || !d || !y) return null;
+  const mm = String(m).padStart(2, "0");
+  const dd = String(d).padStart(2, "0");
+  return `${y}-${mm}-${dd}`;
+}
+
+function normalizeDatesForBackend(datesStr) {
+  // Accepts "M/D/YYYY - M/D/YYYY" OR already ISO format
+  if (!datesStr) return "";
+
+  // If already contains YYYY-MM-DD, leave it
+  if (/\d{4}-\d{2}-\d{2}/.test(datesStr)) return datesStr;
+
+  // Try parsing "M/D/YYYY - M/D/YYYY"
+  const parts = datesStr.split("-").map(s => s.trim());
+  if (parts.length < 2) return datesStr;
+
+  const startISO = toISODate(parts[0]);
+  const endISO = toISODate(parts[1]);
+  if (!startISO || !endISO) return datesStr;
+
+  return `${startISO} to ${endISO}`;
+}
+
+// Budget select values are "0-500", "500-1000", etc.
+// Backend wants maxPrice (a number). We'll send the HIGH end.
+function parseBudgetMax(budgetValue) {
+  if (!budgetValue) return "";
+  if (budgetValue.includes("+")) return ""; // treat as no max
+  const [low, high] = budgetValue.split("-").map(s => s.trim());
+  return high || "";
+}
+
+function renderFlights(data) {
+  const container = document.getElementById("flightResults");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (data.error) {
+    container.innerHTML = `<div class="flight-error">${data.error}</div>`;
+    return;
+  }
+
+  const offers = data.offers || [];
+  if (offers.length === 0) {
+    container.innerHTML = `<div class="flight-empty">No flights found.</div>`;
+    return;
+  }
+
+  offers.forEach((offer) => {
+    const out = offer.outbound;
+    const inb = offer.inbound;
+
+    const price = offer.price?.total ?? "?";
+    const currency = offer.price?.currency ?? "USD";
+
+    const airline = out?.airlines?.length ? out.airlines.join(", ") : "Airline unavailable";
+    const codes = (offer.flightCodes || []).join(" • ");
+
+    const card = document.createElement("div");
+    card.className = "flight-card";
+    card.innerHTML = `
+      <div class="flight-card-top">
+        <div>
+          <div class="flight-price">${currency} ${price}</div>
+          <div class="flight-airline">${airline}</div>
+        </div>
+        <div class="flight-codes">${codes}</div>
+      </div>
+
+      <div class="flight-legs">
+        <div class="flight-leg">
+          <div class="flight-leg-title">Outbound</div>
+          <div class="flight-leg-route">${out?.from ?? ""} → ${out?.to ?? ""}</div>
+          <div class="flight-leg-time">${fmtTime(out?.departAt)} → ${fmtTime(out?.arriveAt)}</div>
+          <div class="flight-leg-meta">${stopsLabel(out?.stops ?? 0)} • ${out?.duration ?? ""}</div>
+        </div>
+
+        ${inb ? `
+          <div class="flight-leg">
+            <div class="flight-leg-title">Return</div>
+            <div class="flight-leg-route">${inb?.from ?? ""} → ${inb?.to ?? ""}</div>
+            <div class="flight-leg-time">${fmtTime(inb?.departAt)} → ${fmtTime(inb?.arriveAt)}</div>
+            <div class="flight-leg-meta">${stopsLabel(inb?.stops ?? 0)} • ${inb?.duration ?? ""}</div>
+          </div>
+        ` : ""}
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
