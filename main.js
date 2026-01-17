@@ -171,7 +171,7 @@ tabButtons.forEach(btn => {
 // ---------------- Explore Destinations Grid ----------------
 const exploreGrid = document.querySelector('.explore-placeholder') || document.getElementById('cityGrid');
 
-const cities = [
+const allCities = [
   {name: "Paris", image: "https://loveincorporated.blob.core.windows.net/contentimages/fullsize/a8a9bce0-de89-417e-a65e-ecdaf23d1d59-paris-full-guide-update.jpg"},
   {name: "Tokyo", image: "https://wallpaperaccess.com/full/44164.jpg"},
   {name: "New York", image: "https://th.bing.com/th/id/R.cf34b93eb0a87fe2085efa649a47d521?rik=elSp%2bjkA%2fEBZfg&riu=http%3a%2f%2fbpc.h-cdn.co%2fassets%2f17%2f23%2f1600x800%2flandscape-1496690479-new-york-tourist-attractions.jpg&ehk=d4JFcY9X9JtMK1q7rWEbMjyZdOTPxQTN%2brP1qqHkwNw%3d&risl=&pid=ImgRaw&r=0"},
@@ -204,27 +204,67 @@ const cities = [
   {name: "Miami", image: "https://tse1.mm.bing.net/th/id/OIP.ILRTrQmOGq8Sq-quxVhquwHaE8?rs=1&pid=ImgDetMain&o=7&rm=3"}
 ];
 
+// Load favorites from localStorage
+let favorites = JSON.parse(localStorage.getItem('favoriteCities')) || [];
 
-cities.forEach(cityObj => {
-  const card = document.createElement('div');
-  card.className = 'city-card';
+function toggleFavorite(cityName, event) {
+  event.stopPropagation();
   
-  const img = document.createElement('img');
-  img.src = cityObj.image;
-  img.alt = cityObj.name;
+  if (favorites.includes(cityName)) {
+    favorites = favorites.filter(fav => fav !== cityName);
+  } else {
+    favorites.push(cityName);
+  }
   
-  const cityName = document.createElement('div');
-  cityName.textContent = cityObj.name;
+  localStorage.setItem('favoriteCities', JSON.stringify(favorites));
+  renderCityGrid();
+}
+
+function getSortedCities() {
+  // Separate favorites and non-favorites
+  const favCities = allCities.filter(city => favorites.includes(city.name));
+  const nonFavCities = allCities.filter(city => !favorites.includes(city.name));
   
-  card.appendChild(img);
-  card.appendChild(cityName);
+  // Favorites at top, then rest
+  return [...favCities, ...nonFavCities];
+}
+
+function renderCityGrid() {
+  exploreGrid.innerHTML = '';
+  const sortedCities = getSortedCities();
   
-  card.addEventListener('click', () => {
-    document.getElementById('destination').value = cityObj.name;
+  sortedCities.forEach(cityObj => {
+    const card = document.createElement('div');
+    card.className = 'city-card';
+    if (favorites.includes(cityObj.name)) {
+      card.classList.add('favorited');
+    }
+    
+    const img = document.createElement('img');
+    img.src = cityObj.image;
+    img.alt = cityObj.name;
+    
+    const heartBtn = document.createElement('button');
+    heartBtn.className = 'heart-btn';
+    heartBtn.innerHTML = favorites.includes(cityObj.name) ? '❤️' : '🤍';
+    heartBtn.addEventListener('click', (e) => toggleFavorite(cityObj.name, e));
+    
+    const cityName = document.createElement('div');
+    cityName.textContent = cityObj.name;
+    
+    card.appendChild(img);
+    card.appendChild(heartBtn);
+    card.appendChild(cityName);
+    
+    card.addEventListener('click', () => {
+      document.getElementById('destination').value = cityObj.name;
+    });
+    
+    exploreGrid.appendChild(card);
   });
-  
-  exploreGrid.appendChild(card);
-});
+}
+
+renderCityGrid();
 
 // ---------------- Calendar Popup ----------------
 function initDatePicker() {

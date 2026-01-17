@@ -306,6 +306,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
 }
 
 .city-card:hover {
@@ -313,11 +314,41 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.city-card.favorited {
+  border-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+
 .city-card img {
   width: 100%;
   height: 180px;
   object-fit: cover;
   display: block;
+}
+
+.heart-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: none;
+  padding: 0;
+}
+
+.heart-btn:hover {
+  background: none;
+  transform: scale(1.2);
+  box-shadow: none;
 }
 
 .city-card div:last-child {
