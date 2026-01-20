@@ -229,9 +229,12 @@ async function searchFlights() {
 
 
 function generateItinerary(destination, dates, budget, transport, interests, userMessage) {
- return `Great! I'm planning a trip to ${destination} from ${dates} with a ${budget} budget.
- Transportation: ${transport}. Your interests: ${interests.length > 0 ? interests.join(', ') : 'general sightseeing'}.
- Special requests: ${userMessage}. Your personalized itinerary is being generated...`;
+ return `Great! I'm planning a trip to ${destination} from ${dates} with a $${budget} budget
+ Transportation: ${transport}
+ Your interests: ${interests.length > 0 ? interests.join(', ') : 'general sightseeing'}
+ Special requests: ${userMessage}
+
+Your personalized itinerary is being generated...`;
 }
 
 
