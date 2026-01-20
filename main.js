@@ -61,7 +61,6 @@ function handleSendMessage() {
 
 
  const botResponse = generateItinerary(destination, dates, budget, transport, selectedInterests, message);
- setTimeout(() => displayMessage(botResponse, 'bot'), 500);
  searchFlights();
  setTimeout(() => displayMessage(botResponse, 'bot'), 500);
 }
