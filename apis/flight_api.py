@@ -190,26 +190,11 @@ def summarize_offer(offer, dictionaries):
         "inbound": summarize_itinerary(inbound, dictionaries)
     }
 
-# ---------------------------
-# Routes
-# ---------------------------
-
-@app.route("/")
-def home():
-    return send_from_directory(ROOT_DIR, "index.html")
-
-@app.route("/main.js")
-def serve_main_js():
-    return send_from_directory(ROOT_DIR, "main.js")
-
-@app.route("/style.css")
-def serve_style_css():
-    return send_from_directory(ROOT_DIR, "style.css")
-
-@app.post("/api/flights")
-def flights():
-    body = request.get_json(force=True)
-
+def search_flights(body):
+    """
+    Search for flights based on request body.
+    Returns: (payload_dict, status_code)
+    """
     origin_input = body.get("origin", "JFK")
     destination_input = body.get("destination", "")
     dates = body.get("dates", "")
@@ -217,20 +202,20 @@ def flights():
 
     depart_date, return_date = parse_dates(dates)
     if not depart_date:
-        return jsonify({"error": "Dates must be in YYYY-MM-DD format"}), 400
+        return ({"error": "Dates must be in YYYY-MM-DD format"}, 400)
 
     origin = resolve_iata(origin_input) or "JFK"
     destination = resolve_iata(destination_input)
 
     if not destination:
-        return jsonify({"error": f"Could not resolve destination '{destination_input}'"}), 400
+        return ({"error": f"Could not resolve destination '{destination_input}'"}, 400)
 
     max_price = None
     if budget:
         try:
             max_price = int(float(budget))
         except ValueError:
-            return jsonify({"error": "Budget must be numeric"}), 400
+            return ({"error": "Budget must be numeric"}, 400)
 
     try:
         params = {
@@ -250,7 +235,7 @@ def flights():
         resp = amadeus.shopping.flight_offers_search.get(**params)
 
     except ResponseError as e:
-        return jsonify({"error": "Amadeus request failed", "message": str(e)}), 500
+        return ({"error": "Amadeus request failed", "message": str(e)}, 500)
 
     data = resp.data or []
     dictionaries = resp.result.get("dictionaries", {})
@@ -258,20 +243,42 @@ def flights():
     summarized = [summarize_offer(o, dictionaries) for o in data]
 
     result_payload = {
-    "origin": origin,
-    "destination": destination,
-    "depart_date": depart_date,
-    "return_date": return_date,
-    "offers": summarized,
-    "saved_at": datetime.now().isoformat()
+        "origin": origin,
+        "destination": destination,
+        "depart_date": depart_date,
+        "return_date": return_date,
+        "offers": summarized,
+        "saved_at": datetime.now().isoformat()
     }
 
-    # Save next to flight_api.py (inside /apis folder)
+    # Save to file
     out_path = os.path.join(os.path.dirname(__file__), "flight_results.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result_payload, f, indent=2)
 
-    return jsonify(result_payload)
+    return (result_payload, 200)
+
+# ---------------------------
+# Routes
+# ---------------------------
+
+@app.route("/")
+def home():
+    return send_from_directory(ROOT_DIR, "index.html")
+
+@app.route("/main.js")
+def serve_main_js():
+    return send_from_directory(ROOT_DIR, "main.js")
+
+@app.route("/style.css")
+def serve_style_css():
+    return send_from_directory(ROOT_DIR, "style.css")
+
+@app.post("/api/flights")
+def flights():
+    body = request.get_json(force=True)
+    payload, status = search_flights(body)
+    return jsonify(payload), status
 
 
 

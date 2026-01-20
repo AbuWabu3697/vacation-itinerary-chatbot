@@ -1,4 +1,6 @@
 import requests
+import os
+import csv
 
 class AmadeusAPI:
     def __init__(self, client_id, client_secret):
@@ -164,6 +166,38 @@ class AmadeusAPI:
     # ==============================================
     # HOTELS
     # ==============================================
+
+    # gets the IATA city code for a given city name
+
+    def get_city_code(self, city_name):
+        # Get the path to airports.dat (it's in ../data/ relative to apis/)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        airports_file = os.path.join(current_dir, '..', 'data', 'airports.dat')
+        
+        # Normalize city name for comparison (case-insensitive, strip whitespace)
+        city_name_lower = city_name.strip().lower()
+        
+        try:
+            with open(airports_file, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if len(row) >= 5:
+                        # Field 2 is the city name, Field 4 is the IATA code
+                        airport_city = row[2].strip().lower()
+                        iata_code = row[4].strip()
+                        
+                        # Check for exact match or if city name contains the search term
+                        if airport_city == city_name_lower or city_name_lower in airport_city:
+                            # Skip if IATA code is \N (not available)
+                            if iata_code and iata_code != '\\N':
+                                return iata_code
+            
+            # If no match found, return None or raise an exception
+            return None
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Could not find airports.dat at {airports_file}")
+        except Exception as e:
+            raise Exception(f"Error reading airports.dat: {str(e)}")
 
     # searches for hotels in a 
     def search_hotels(self, city_code):
