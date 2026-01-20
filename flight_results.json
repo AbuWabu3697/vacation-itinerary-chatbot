@@ -1,0 +1,223 @@
+{
+  "origin": "BOS",
+  "destination": "PAR",
+  "depart_date": "2026-01-26",
+  "return_date": "2026-01-30",
+  "offers": [
+    {
+      "id": "1",
+      "price": {
+        "total": "457.53",
+        "currency": "USD"
+      },
+      "flightCodes": [
+        "FI 630",
+        "FI 542",
+        "FI 545",
+        "FI 631"
+      ],
+      "outbound": {
+        "from": "BOS",
+        "to": "CDG",
+        "departAt": "2026-01-26T19:50:00",
+        "arriveAt": "2026-01-27T12:00:00",
+        "stops": 1,
+        "duration": "PT10H10M",
+        "airlines": [
+          "ICELANDAIR"
+        ],
+        "carrierCodes": [
+          "FI"
+        ]
+      },
+      "inbound": {
+        "from": "CDG",
+        "to": "BOS",
+        "departAt": "2026-01-30T13:10:00",
+        "arriveAt": "2026-01-30T17:50:00",
+        "stops": 1,
+        "duration": "PT10H40M",
+        "airlines": [
+          "ICELANDAIR"
+        ],
+        "carrierCodes": [
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "price": {
+        "total": "457.53",
+        "currency": "USD"
+      },
+      "flightCodes": [
+        "FI 630",
+        "FI 542",
+        "FI 543",
+        "FI 631"
+      ],
+      "outbound": {
+        "from": "BOS",
+        "to": "CDG",
+        "departAt": "2026-01-26T19:50:00",
+        "arriveAt": "2026-01-27T12:00:00",
+        "stops": 1,
+        "duration": "PT10H10M",
+        "airlines": [
+          "ICELANDAIR"
+        ],
+        "carrierCodes": [
+          "FI"
+        ]
+      },
+      "inbound": {
+        "from": "CDG",
+        "to": "BOS",
+        "departAt": "2026-01-30T13:00:00",
+        "arriveAt": "2026-01-30T17:50:00",
+        "stops": 1,
+        "duration": "PT10H50M",
+        "airlines": [
+          "ICELANDAIR"
+        ],
+        "carrierCodes": [
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "price": {
+        "total": "699.63",
+        "currency": "USD"
+      },
+      "flightCodes": [
+        "B6 217",
+        "TP 210",
+        "TP 436",
+        "TP 443",
+        "TP 217"
+      ],
+      "outbound": {
+        "from": "BOS",
+        "to": "ORY",
+        "departAt": "2026-01-26T08:30:00",
+        "arriveAt": "2026-01-27T16:50:00",
+        "stops": 2,
+        "duration": "PT26H20M",
+        "airlines": [
+          "JETBLUE AIRWAYS",
+          "TAP PORTUGAL"
+        ],
+        "carrierCodes": [
+          "B6",
+          "TP"
+        ]
+      },
+      "inbound": {
+        "from": "ORY",
+        "to": "BOS",
+        "departAt": "2026-01-30T08:00:00",
+        "arriveAt": "2026-01-30T14:35:00",
+        "stops": 1,
+        "duration": "PT12H35M",
+        "airlines": [
+          "TAP PORTUGAL"
+        ],
+        "carrierCodes": [
+          "TP"
+        ]
+      }
+    },
+    {
+      "id": "4",
+      "price": {
+        "total": "699.63",
+        "currency": "USD"
+      },
+      "flightCodes": [
+        "B6 217",
+        "TP 210",
+        "TP 436",
+        "TP 433",
+        "TP 215"
+      ],
+      "outbound": {
+        "from": "BOS",
+        "to": "ORY",
+        "departAt": "2026-01-26T08:30:00",
+        "arriveAt": "2026-01-27T16:50:00",
+        "stops": 2,
+        "duration": "PT26H20M",
+        "airlines": [
+          "JETBLUE AIRWAYS",
+          "TAP PORTUGAL"
+        ],
+        "carrierCodes": [
+          "B6",
+          "TP"
+        ]
+      },
+      "inbound": {
+        "from": "ORY",
+        "to": "BOS",
+        "departAt": "2026-01-30T12:35:00",
+        "arriveAt": "2026-01-30T20:10:00",
+        "stops": 1,
+        "duration": "PT13H35M",
+        "airlines": [
+          "TAP PORTUGAL"
+        ],
+        "carrierCodes": [
+          "TP"
+        ]
+      }
+    },
+    {
+      "id": "5",
+      "price": {
+        "total": "699.63",
+        "currency": "USD"
+      },
+      "flightCodes": [
+        "B6 217",
+        "TP 210",
+        "TP 436",
+        "TP 441",
+        "TP 217"
+      ],
+      "outbound": {
+        "from": "BOS",
+        "to": "ORY",
+        "departAt": "2026-01-26T08:30:00",
+        "arriveAt": "2026-01-27T16:50:00",
+        "stops": 2,
+        "duration": "PT26H20M",
+        "airlines": [
+          "JETBLUE AIRWAYS",
+          "TAP PORTUGAL"
+        ],
+        "carrierCodes": [
+          "B6",
+          "TP"
+        ]
+      },
+      "inbound": {
+        "from": "ORY",
+        "to": "BOS",
+        "departAt": "2026-01-30T06:40:00",
+        "arriveAt": "2026-01-30T14:35:00",
+        "stops": 1,
+        "duration": "PT13H55M",
+        "airlines": [
+          "TAP PORTUGAL"
+        ],
+        "carrierCodes": [
+          "TP"
+        ]
+      }
+    }
+  ],
+  "saved_at": "2026-01-20T14:29:00.972096"
+}

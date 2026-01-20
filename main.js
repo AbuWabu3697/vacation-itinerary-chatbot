@@ -45,18 +45,18 @@ async function handleSendMessage() {
     return;
   }
 
+  // show user's message once
   displayMessage(message, 'user');
   userInput.value = '';
 
+  // show loading message
   const loadingMsg = displayMessage("Generating your itinerary...", 'bot');
 
   try {
     // API call to backend
     const response = await fetch('/api/generate-itinerary', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         destination,
         dates,
@@ -75,17 +75,23 @@ async function handleSendMessage() {
 
     loadingMsg.remove();
     displayMessage(data.message, 'bot');
-    
     renderItinerary(data.itinerary);
+
+    // after itinerary, fetch flights + hotels
+    searchFlights();
+    searchHotels();
 
   } catch (error) {
     console.error('Error:', error);
     loadingMsg.remove();
     displayMessage(`❌ Error: ${error.message}`, 'bot');
-  }
 
-  searchFlights();
+    // even if itinerary fails, you can still try flights/hotels if you want:
+    // searchFlights();
+    // searchHotels();
+  }
 }
+
 
 
 function displayMessage(text, sender) {
@@ -227,7 +233,7 @@ async function searchFlights() {
 
 
 
- // 🔥 ADD THIS BLOCK RIGHT HERE
+ 
  if (data.error) {
    const msg = data.message ? ` (${data.message})` : "";
    displayMessage("❌ " + data.error + msg, "bot");
@@ -239,6 +245,8 @@ async function searchFlights() {
 
  // ✅ If no error, continue rendering flights
  displayMessage("✈️ Found " + data.offers.length + " flights!", "bot");
+ renderFlights(data);
+
 
 
 
@@ -246,6 +254,156 @@ async function searchFlights() {
  // TODO: format flight cards here
 }
 
+//Hotel
+
+function setHotelStatus(text) {
+  const el = document.getElementById("hotelStatus");
+  if (el) el.textContent = text || "";
+}
+
+async function searchHotels() {
+  console.log("🟢 searchHotels() CALLED");
+
+  const destination = document.getElementById('destination').value.trim();
+  const datesRaw = document.getElementById('dates').value.trim();
+  const dates = normalizeDatesForBackend(datesRaw);
+
+  const budgetRaw = document.getElementById('budget').value.trim();
+  const budget = parseBudgetMax(budgetRaw);
+
+  const payload = { destination, dates, budget, flight_cost: "" };
+
+  const status = document.getElementById("hotelStatus");
+  if (status) status.textContent = "Searching hotels...";
+
+  const res = await fetch("/api/hotels", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  console.log("HOTEL HTTP status:", res.status);
+
+  const data = await res.json();
+  console.log("hotel results:", data);
+
+  if (status) status.textContent = "";
+
+  if (data.error) {
+    displayMessage("🏨 ❌ " + data.error, "bot");
+    console.log("hotel error details:", data.details);
+    return;
+  }
+
+  displayMessage("🏨 Found " + (data.hotels?.length || 0) + " hotels!", "bot");
+  renderHotels(data);
+}
+
+/*
+async function searchHotels(flightCostMaybe) {
+  const destination = document.getElementById('destination').value.trim();
+  const datesRaw = document.getElementById('dates').value.trim();
+  const dates = normalizeDatesForBackend(datesRaw);
+
+  const budgetRaw = document.getElementById('budget').value.trim();
+  const budget = parseBudgetMax(budgetRaw);
+
+  if (!destination || !dates) return;
+
+  setHotelStatus("Searching hotels...");
+
+  const payload = {
+    destination,
+    dates,
+    budget,
+    // optional: if you pass flight cost later
+    flight_cost: flightCostMaybe ?? ""
+  };
+
+  const res = await fetch("/api/hotels", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  console.log("hotel results:", data);
+
+  if (!res.ok || data.error) {
+  const details = data.details ? JSON.stringify(data.details, null, 2) : "";
+  displayMessage("🏨 ❌ " + (data.error || "Hotel request failed"), "bot");
+  if (details) displayMessage("<pre>" + details + "</pre>", "bot");
+  setHotelStatus("");
+  return;
+}
+
+
+  setHotelStatus(`Found ${data.hotels?.length ?? 0} hotels`);
+  displayMessage(`🏨 Found ${(data.hotels?.length ?? 0)} hotels!`, "bot");
+  renderHotels(data);
+}
+*/
+function renderHotels(data) {
+  const container = document.getElementById("hotelResults");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (data.error) {
+    container.innerHTML = `<div class="flight-error">${data.error}</div>`;
+    return;
+  }
+
+  const hotels = data.hotels || [];
+  if (hotels.length === 0) {
+    container.innerHTML = `<div class="flight-empty">No hotels found.</div>`;
+    return;
+  }
+
+  hotels.forEach((h) => {
+    const name = h.name ?? "Hotel";
+    const rating = h.rating ? `${h.rating}★` : "No rating";
+    const offer = h.cheapestOffer || {};
+    const price = offer.price?.total ?? "?";
+    const currency = offer.price?.currency ?? "USD";
+
+    const addr = h.address || {};
+    const lines = [];
+    if (addr.lines?.length) lines.push(addr.lines.join(", "));
+    if (addr.cityName) lines.push(addr.cityName);
+    if (addr.countryCode) lines.push(addr.countryCode);
+    const addressText = lines.length ? lines.join(" • ") : "Address unavailable";
+
+    const card = document.createElement("div");
+    card.className = "hotel-card";
+    card.innerHTML = `
+      <div class="hotel-card-top">
+        <div>
+          <div class="flight-price">${currency} ${price}</div>
+          <div class="hotel-name">${name}</div>
+          <div class="hotel-sub">${addressText}</div>
+        </div>
+        <div class="hotel-badge">${rating}</div>
+      </div>
+
+      <div class="hotel-meta">
+        <div class="hotel-box">
+          <div class="hotel-box-title">Stay</div>
+          <div class="hotel-box-line">${offer.checkInDate ?? ""} → ${offer.checkOutDate ?? ""}</div>
+          <div class="hotel-box-subline">${offer.roomType ?? ""}</div>
+        </div>
+
+        <div class="hotel-box">
+          <div class="hotel-box-title">Offer</div>
+          <div class="hotel-box-line">${offer.boardType ?? "Board type N/A"}</div>
+          <div class="hotel-box-subline">${offer.rateType ? `Rate: ${offer.rateType}` : ""}</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+
+  });
+}
 
 
 

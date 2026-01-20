@@ -450,7 +450,9 @@ class AmadeusAPI:
     # =========================================================
     # ORIGINAL METHODS (kept) — Hotels
     # =========================================================
+    
     def search_hotels(self, city_code):
+        print("right serch 2")
         resp = self._request(
             "GET",
             "/v1/reference-data/locations/hotels/by-city",
@@ -498,6 +500,7 @@ class AmadeusAPI:
         hotels_url = "https://test.api.amadeus.com/v3/shopping/hotels/by-city"
 
     def filter_hotels(self, hotel_ids, check_in_date, check_out_date, adults, room_quantity, price_range=None, currency="USD"):
+        print("filter hotels called 2")
         params = {
             "hotelIds": ",".join(hotel_ids),
             "checkInDate": check_in_date,
@@ -581,13 +584,16 @@ class AmadeusAPI:
      # =========================================================
     # ORIGINAL METHODS (kept) — Hotels
     # =========================================================
+    
     def search_hotels(self, city_code):
+        #print("right one serch")
         hotels_url = f"{self._base_url()}/v3/shopping/hotels/by-city"
         params = {"cityCode": city_code}
         response = requests.get(hotels_url, headers=self._headers(), params=params, timeout=20)
         return response.json()
 
     def filter_hotels(self, hotel_ids, check_in_date, check_out_date, adults, room_quantity, price_range):
+        #print("filter hotels called")
         hotel_info_url = f"{self._base_url()}/v3/shopping/hotels"
         params = {
             "hotelIds": hotel_ids,
@@ -599,6 +605,7 @@ class AmadeusAPI:
         }
         response = requests.get(hotel_info_url, headers=self._headers(), params=params, timeout=20)
         return response.json()
+    
 
     # FIXED: added self
     def create_hotel_booking_order(
