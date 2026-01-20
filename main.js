@@ -30,43 +30,62 @@ document.getElementById('userInput').addEventListener('keypress', function(e) {
 
 
 
-function handleSendMessage() {
- const userInput = document.getElementById('userInput');
- const destination = document.getElementById('destination').value;
- const dates = document.getElementById('dates').value;
- const budget = document.getElementById('budget').value;
- const transport = document.getElementById('transport').value;
- const message = userInput.value.trim();
+async function handleSendMessage() {
+  const userInput = document.getElementById('userInput');
+  const destination = document.getElementById('destination').value;
+  const dates = document.getElementById('dates').value;
+  const budget = document.getElementById('budget').value;
+  const transport = document.getElementById('transport').value;
+  const message = userInput.value.trim();
 
+  if (!message) return;
 
+  if (!destination || !dates || !budget) {
+    alert('Please fill in destination, dates, and budget to continue.');
+    return;
+  }
 
+  displayMessage(message, 'user');
+  userInput.value = '';
 
- if (!message) return;
+  const loadingMsg = displayMessage("Generating your itinerary...", 'bot');
 
+  try {
+    // API call to backend
+    const response = await fetch('/api/generate-itinerary', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destination,
+        dates,
+        budget,
+        transport,
+        interests: selectedInterests,
+        message
+      })
+    });
 
+    const data = await response.json();
 
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate itinerary');
+    }
 
- if (!destination || !dates || !budget) {
-   alert('Please fill in destination, dates, and budget to continue.');
-   return;
- }
+    loadingMsg.remove();
+    displayMessage(data.message, 'bot');
+    
+    renderItinerary(data.itinerary);
 
+  } catch (error) {
+    console.error('Error:', error);
+    loadingMsg.remove();
+    displayMessage(`❌ Error: ${error.message}`, 'bot');
+  }
 
-
-
- displayMessage(message, 'user');
- userInput.value = '';
-
-
-
-
- const botResponse = generateItinerary(destination, dates, budget, transport, selectedInterests, message);
- setTimeout(() => displayMessage(botResponse, 'bot'), 500);
- searchFlights();
- setTimeout(() => displayMessage(botResponse, 'bot'), 500);
+  searchFlights();
 }
-
-
 
 
 function displayMessage(text, sender) {
@@ -239,9 +258,12 @@ async function searchFlights() {
 
 
 function generateItinerary(destination, dates, budget, transport, interests, userMessage) {
- return `Great! I'm planning a trip to ${destination} from ${dates} with a ${budget} budget.
- Transportation: ${transport}. Your interests: ${interests.length > 0 ? interests.join(', ') : 'general sightseeing'}.
- Special requests: ${userMessage}. Your personalized itinerary is being generated...`;
+ return `Great! I'm planning a trip to ${destination} from ${dates} with a $${budget} budget
+ Transportation: ${transport}
+ Your interests: ${interests.length > 0 ? interests.join(', ') : 'general sightseeing'}
+ Special requests: ${userMessage}
+
+Your personalized itinerary is being generated...`;
 }
 
 
