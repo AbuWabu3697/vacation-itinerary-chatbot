@@ -51,21 +51,12 @@ function handleSendMessage() {
    return;
  }
 
-
-
-
- displayMessage(message, 'user');
  userInput.value = '';
-
-
-
 
  const botResponse = generateItinerary(destination, dates, budget, transport, selectedInterests, message);
  searchFlights();
  setTimeout(() => displayMessage(botResponse, 'bot'), 500);
 }
-
-
 
 
 function displayMessage(text, sender) {
