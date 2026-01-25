@@ -3,18 +3,13 @@ import re
 import csv
 import json
 import requests
-<<<<<<< HEAD
 from datetime import datetime
 from difflib import get_close_matches
 from requests.auth import HTTPBasicAuth
-from datetime import datetime
+import time
 
 IATA_RE = re.compile(r"^[A-Z]{3}$")
 
-=======
-import os
-import csv
->>>>>>> main
 
 class AmadeusAPI:
     """
@@ -25,6 +20,12 @@ class AmadeusAPI:
     """
 
     def __init__(self, client_id, client_secret, hostname="test", data_dir=None):
+
+        self._airports_loaded = False
+        self._airports = []          # or {} depending on your loader
+        self._airports_path = os.path.join(os.path.dirname(__file__), "data", "airports.csv")
+        self.data_dir = data_dir or os.path.join(os.path.dirname(__file__), "data")
+
         self.client_id = client_id
         self.client_secret = client_secret
         self.hostname = hostname
@@ -69,6 +70,7 @@ class AmadeusAPI:
             raise Exception(f"Failed to get access token: {token_json}")
 
         self.access_token = token_json["access_token"]
+        print("🪪 AMADEUS ACCESS TOKEN:", self.access_token, flush=True)
 
 
     def _headers(self, json_content=False):
@@ -84,6 +86,11 @@ class AmadeusAPI:
         return "https://test.api.amadeus.com" if self.hostname == "test" else "https://api.amadeus.com"
     
     def _request(self, method, path, *, params=None, json_body=None, timeout=20):
+
+        print(f"AMADEUS REQ {method} {path} PARAMS:", params, flush=True)
+
+        
+
         """
         Makes an Amadeus request. If token is expired (401), refresh token and retry once.
         """
@@ -120,8 +127,9 @@ class AmadeusAPI:
     # NEW METHODS (from your new file) — Airports + IATA
     # =========================================================
     def _load_airports(self):
-        if self._airports_loaded:
+        if getattr(self, "_airports_loaded", False):
             return
+
 
         path = os.path.join(self.data_dir, "airports.dat")
         if not os.path.exists(path):
@@ -289,50 +297,104 @@ class AmadeusAPI:
         non_stop=None,
     ):
         """
-        NEW: Flight search that returns summarized clean JSON.
-        - origin/destination can be city names or IATA
-        - budget (maxPrice) optional
-        - non_stop optional (True/False)
+        Flight search that returns summarized clean JSON.
+        Adds:
+        (2) narrowing filters (optional)
+        (3) full error logging
+        (4) retry-on-141 (Amadeus "SYSTEM ERROR")
         """
+
         origin_code = self.resolve_iata(origin) or "JFK"
         dest_code = self.resolve_iata(destination)
 
         if not dest_code:
             return {"error": f"Could not resolve destination '{destination}'"}
 
-        url = f"{self._base_url()}/v2/shopping/flight-offers"
-
         params = {
             "originLocationCode": origin_code,
             "destinationLocationCode": dest_code,
             "departureDate": depart_date,
             "adults": adults,
-            "currencyCode": currency,
             "max": max_results,
         }
 
+        # Return date if round trip
         if return_date:
             params["returnDate"] = return_date
 
-        if budget is not None:
+        # Budget -> maxPrice
+        if budget is not None and str(budget).strip() != "":
             params["maxPrice"] = int(float(budget))
 
+        # Currency can stay, but to isolate issues you can comment it out temporarily
+        if currency:
+            params["currencyCode"] = currency
+
+        # Nonstop if user provided it
         if non_stop is not None:
-            params["nonStop"] = bool(non_stop)
+            params["nonStop"] = "true" if bool(non_stop) else "false"
 
-        resp = self._request("GET", "/v2/shopping/flight-offers", params=params)
-        payload = resp.json()
+        def _do_call(p):
+            print("✈️ FLIGHT PARAMS SENT:", sorted(list(p)), flush=True)
+            assert "originLocationCode" in p and "destinationLocationCode" in p, f"Bad keys: {list(p)}"
 
+            resp = self._request("GET", "/v2/shopping/flight-offers", params=p)
+
+            try:
+                payload = resp.json()
+            except Exception:
+                payload = {"raw": getattr(resp, "text", ""), "status_code": resp.status_code}
+
+            # (3) full error logging
+            if resp.status_code >= 400:
+                print("❌ AMADEUS FLIGHT ERROR STATUS:", resp.status_code, flush=True)
+                print("❌ AMADEUS FLIGHT ERROR PAYLOAD:", payload, flush=True)
+
+            return resp, payload
+
+        # First attempt
+        resp, payload = _do_call(dict(params))
+
+        # (4) retry-on-141 with (2) narrowing
+        if resp.status_code >= 400:
+            # detect Amadeus error code 141 if present
+            code = None
+            try:
+                errs = (payload or {}).get("errors") or []
+                if errs and isinstance(errs[0], dict):
+                    code = errs[0].get("code")
+            except Exception:
+                code = None
+
+            if str(code) == "141":
+                print("🔁 Amadeus returned code 141. Retrying once with narrowing filters...", flush=True)
+
+                narrowed = dict(params)
+
+                # (2) Narrow the search to reduce timeouts / generic queries
+                # Force nonstop for retry (you can remove if you don't want this)
+                narrowed["nonStop"] = "true"
+
+                # Optional extra narrowing (uncomment if needed):
+                # narrowed["travelClass"] = "ECONOMY"
+
+                time.sleep(0.5)  # small backoff
+                resp, payload = _do_call(narrowed)
+
+                # Use narrowed params if it succeeded
+                if resp.status_code < 400:
+                    params = narrowed
 
         if resp.status_code >= 400:
             return {"error": "Amadeus request failed", "details": payload}
 
-        data = payload.get("data", []) or []
-        dictionaries = payload.get("dictionaries", {}) or {}
+        data = (payload or {}).get("data", []) or []
+        dictionaries = (payload or {}).get("dictionaries", {}) or {}
 
         summarized = [self._summarize_offer(o, dictionaries) for o in data]
 
         result_payload = {
+            "query": params,
             "origin": origin_code,
             "destination": dest_code,
             "depart_date": depart_date,
@@ -346,9 +408,52 @@ class AmadeusAPI:
 
         return result_payload
 
+
     # =========================================================
     # ORIGINAL METHODS (kept) — Flights booking
     # =========================================================
+    def resolve_iata_airport_first(self, query: str):
+        """
+        Resolve input to an AIRPORT IATA first (CDG instead of PAR).
+        Falls back to city, then local DB.
+        """
+
+        if not query:
+            return None
+
+        q = query.strip().upper()
+
+        # If already an IATA code, return directly
+        if re.match(r"^[A-Z]{3}$", q):
+            return q
+
+        # 1) Try Amadeus Locations API
+        try:
+            params = {
+                "keyword": query,
+                "subType": "AIRPORT,CITY",
+                "page[limit]": 10,
+            }
+
+            resp = self._request("GET", "/v1/reference-data/locations", params=params)
+            data = (resp.json() or {}).get("data", [])
+
+            # Prefer AIRPORT codes first (critical for flights)
+            for x in data:
+                if x.get("subType") == "AIRPORT" and x.get("iataCode"):
+                    return x["iataCode"]
+
+            # Then fall back to CITY
+            for x in data:
+                if x.get("subType") == "CITY" and x.get("iataCode"):
+                    return x["iataCode"]
+
+        except Exception:
+            pass
+
+        # 2) Final fallback: local airports.dat
+        return self._resolve_iata_local(query)
+
     def find_best_flights(self, origin, destination, departure_date, adults, currency="USD", non_stop=True):
         """
         Original raw flight offers search. Consider using search_flights_clean instead.
@@ -495,9 +600,6 @@ class AmadeusAPI:
         except Exception as e:
             raise Exception(f"Error reading airports.dat: {str(e)}")
 
-    # searches for hotels in a 
-    def search_hotels(self, city_code):
-        hotels_url = "https://test.api.amadeus.com/v3/shopping/hotels/by-city"
 
     def filter_hotels(self, hotel_ids, check_in_date, check_out_date, adults, room_quantity, price_range=None, currency="USD"):
         print("filter hotels called 2")
@@ -1005,6 +1107,40 @@ class AmadeusAPI:
         )
         response = requests.post(booking_url, headers=self._headers(json_content=True), json=body)
         return response.json()
+    
+    def search_transfers_clean(self, start_iata, end_iata, start_datetime, passengers=1,
+                          transfer_type="PRIVATE", currency="USD", max_results=10):
+        params = {
+            "startLocationCode": start_iata,
+            "endLocationCode": end_iata,
+            "startDateTime": start_datetime,
+            "passengers": passengers,
+            "transferType": transfer_type,
+            "currency": currency,
+        }
+
+        r = self._request("GET", "/v1/shopping/transfers", params=params)
+
+        if r.status_code >= 400:
+            return {"error": "Amadeus transfer request failed", "details": r.text}
+
+        j = r.json() or {}
+        data = j.get("data", [])[:max_results]
+
+        # keep it simple for now
+        transfers = []
+        for item in data:
+            transfers.append({
+                "id": item.get("id"),
+                "transferType": item.get("transferType"),
+                "vehicle": (item.get("vehicle") or {}).get("code"),
+                "duration": item.get("duration"),
+                "price": ((item.get("quotation") or {}).get("monetaryAmount") or {}).get("value"),
+                "currency": ((item.get("quotation") or {}).get("monetaryAmount") or {}).get("currency"),
+            })
+
+        return {"start": start_iata, "end": end_iata, "startDateTime": start_datetime, "transfers": transfers}
+
 
     # =========================================================
     # ORIGINAL METHODS (kept) — Experiences / POIs

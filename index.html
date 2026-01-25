@@ -40,7 +40,7 @@
        <div class="setup-grid">
         <div class="setup-item">
            <label for="starting loc">Starting Location</label>
-           <input type="text" id="destination" placeholder="e.g. Chantilly, Virginia">
+           <input type="text" id="origin" placeholder="e.g. Chantilly, Virginia">
          </div>
 
 
@@ -70,17 +70,6 @@
              <option value="4000+">No Budget</option>
            </select>
          </div>
-
-
-         <div class="setup-item">
-           <label for="transport">Transportation Preference</label>
-           <select id="transport">
-             <option>Public Transit</option>
-             <option>Rental Car</option>
-             <option>Rideshare</option>
-             <option>No Preference</option>
-           </select>
-         </div>
        </div>
      </section>
 
@@ -108,6 +97,10 @@
        </div>
      </main>
 
+      <!-- results sections -->
+
+      <div id="itineraryResults"></div>
+
 
      <section class="trip-setup" id="flights-section">
        <h2>Flight Options</h2>
@@ -129,6 +122,8 @@
       <div id="hotelStatus" style="margin-bottom: 0.75rem; color:#4b5563;"></div>
       <div id="hotelResults"></div>
     </section>
+
+
 
 
 

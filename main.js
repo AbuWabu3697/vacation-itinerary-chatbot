@@ -1,6 +1,16 @@
 // ---------------- Travel Interests ----------------
 let selectedInterests = [];
 
+console.log("✅ main.js loaded @", new Date().toISOString());
+
+window.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ DOMContentLoaded");
+  console.log("sendBtn:", document.getElementById("sendBtn"));
+  console.log("destination:", document.getElementById("destination"));
+  console.log("origin:", document.getElementById("origin"));
+  console.log("dates:", document.getElementById("dates"));
+  console.log("budget:", document.getElementById("budget"));
+});
 
 
 
@@ -31,66 +41,159 @@ document.getElementById('userInput').addEventListener('keypress', function(e) {
 
 
 async function handleSendMessage() {
-  const userInput = document.getElementById('userInput');
-  const destination = document.getElementById('destination').value;
-  const dates = document.getElementById('dates').value;
-  const budget = document.getElementById('budget').value;
-  const transport = document.getElementById('transport').value;
-  const message = userInput.value.trim();
+  console.log("✅ handleSendMessage fired");
 
-  if (!message) return;
+  const userInputEl = document.getElementById("userInput");
+  const destination = document.getElementById("destination").value.trim();
+  const origin = document.getElementById("origin").value.trim();
+  const datesRaw = document.getElementById("dates").value.trim();
+  const budgetRaw = document.getElementById("budget").value.trim();
+  const transport = "";
 
-  if (!destination || !dates || !budget) {
-    alert('Please fill in destination, dates, and budget to continue.');
+  // ✅ IMPORTANT: capture message BEFORE clearing input
+  const message = userInputEl.value.trim();
+
+  console.log("🟦 inputs:", { origin, destination, datesRaw, budgetRaw, transport, message });
+
+  if (!destination || !datesRaw || !budgetRaw || !origin) {
+    alert("Please fill in all fields to continue.");
     return;
   }
 
-  // show user's message once
-  displayMessage(message, 'user');
-  userInput.value = '';
+  if (message) displayMessage(message, "user");
+  userInputEl.value = "";
 
-  // show loading message
-  const loadingMsg = displayMessage("Generating your itinerary...", 'bot');
+  const loadingMsg = displayMessage("Generating your itinerary...", "bot");
 
   try {
-    // API call to backend
-    const response = await fetch('/api/generate-itinerary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        destination,
-        dates,
-        budget,
-        transport,
-        interests: selectedInterests,
-        message
-      })
+    const dates = normalizeDatesForBackend(datesRaw);
+    const budget = parseBudgetMax(budgetRaw);
+
+    loadingMsg.remove();
+    displayMessage("✅ Got your inputs — fetching flights/hotels/activities...", "bot");
+
+    // ✅ Make each search RETURN data
+    let flightsData = null, hotelsData = null, transfersData = null, activitiesData = null;
+
+    try { flightsData = await searchFlights(message); } catch (e) { console.error("Flights failed", e); }
+    try { hotelsData = await searchHotels(); } catch (e) { console.error("Hotels failed", e); }
+
+    displayMessage("🗓️ Building your personalized day-by-day itinerary...", "bot");
+
+    const payload = {
+      origin,
+      destination,
+      dates,
+      budget,
+      transport,
+      interests: selectedInterests,  // ✅ uses your selected interests
+      message,                       // ✅ preserved
+      travel_data: {
+        flights: flightsData,
+        hotels: hotelsData,
+        transfers: transfersData,
+        activities: activitiesData,
+      }
+    };
+
+    const res = await fetch("/api/generate-itinerary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const itineraryResp = await res.json();
+    console.log("itinerary response:", itineraryResp);
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to generate itinerary');
+    if (!res.ok || itineraryResp.error) {
+      displayMessage("🗓️ ❌ " + (itineraryResp.error || "Itinerary generation failed"), "bot");
+      return;
     }
 
-    loadingMsg.remove();
-    displayMessage(data.message, 'bot');
-    renderItinerary(data.itinerary);
+    // ✅ FIX: this used to be data.itinerary (data undefined)
+    const llm = itineraryResp.llm;
+    console.log("DEBUG summary vars:", { flightsData, hotelsData, transfersData });
 
-    // after itinerary, fetch flights + hotels
-    searchFlights();
-    searchHotels();
+    printTravelHeaderToChat(flightsData, hotelsData, transfersData);
+
+// itinerary is returned at top-level
+printItineraryToChat(itineraryResp.itinerary);
+
+// if your backend does NOT return summary/cost stuff, don't call this yet
+// printTripSummaryToChat(itineraryResp);
+
+
 
   } catch (error) {
-    console.error('Error:', error);
-    loadingMsg.remove();
-    displayMessage(`❌ Error: ${error.message}`, 'bot');
-
-    // even if itinerary fails, you can still try flights/hotels if you want:
-    // searchFlights();
-    // searchHotels();
+    console.error("Error:", error);
+    try { loadingMsg.remove(); } catch (_) {}
+    displayMessage(`❌ Error: ${error.message}`, "bot");
   }
 }
+
+function printTravelHeaderToChat(flightsData, hotelsData, transfersData) {
+  let html = `<b>📌 Trip Summary</b><br><br>`;
+
+  // flights
+  html += `<b>✈️ Flights</b><br>`;
+  const offers = flightsData?.offers || [];
+  if (offers.length) {
+    const top = offers[0];
+    html += `• ${top.outbound?.from} → ${top.outbound?.to} (${(top.outbound?.airlines||[]).join(", ")})<br>`;
+    html += `• Price: ${top.price?.currency || "USD"} ${top.price?.total || "?"}<br>`;
+  } else {
+    html += `• No flight results found.<br>`;
+  }
+
+  html += `<br><b>🏨 Hotels</b><br>`;
+  const hotels = hotelsData?.hotels || [];
+  if (hotels.length) {
+    hotels.slice(0, 3).forEach(h => {
+      const offer = h.cheapestOffer || {};
+      html += `• ${h.name} — ${offer.price?.currency || "USD"} ${offer.price?.total || "?"}<br>`;
+    });
+  } else {
+    html += `• No hotel results found.<br>`;
+  }
+
+  displayMessage(html, "bot");
+}
+
+
+function printTripSummaryToChat(llm) {
+  if (!llm) return;
+
+  const s = llm.summary || {};
+  const cost = llm.cost_breakdown || {};
+  const flights = llm.flight_plan || {};
+  const hotels = llm.recommended_hotels || [];
+
+  let html = `<b>✅ Done! Here's your trip summary:</b><br><br>`;
+
+  if (cost.total_estimated?.range_usd) {
+    html += `<b>💰 Estimated total budget:</b> $${cost.total_estimated.range_usd[0]} - $${cost.total_estimated.range_usd[1]}<br>`;
+    if (cost.total_estimated.notes) html += `${cost.total_estimated.notes}<br>`;
+    html += `<br>`;
+  }
+
+  // flights
+  html += `<b>✈️ Flights (${flights.source || "ESTIMATE"}):</b><br>`;
+  (flights.options || []).slice(0, 3).forEach(opt => {
+    html += `• ${opt.summary} ${opt.price_usd != null ? `— $${opt.price_usd}` : ""}<br>`;
+  });
+  html += `<br>`;
+
+  // hotels
+  html += `<b>🏨 Hotels:</b><br>`;
+  hotels.slice(0, 5).forEach(h => {
+    html += `• ${h.name} ${h.price_total_usd != null ? `— $${h.price_total_usd}` : ""} (${h.source})<br>`;
+  });
+
+  displayMessage(html, "bot");
+}
+
+
+
 
 
 
@@ -105,7 +208,14 @@ function displayMessage(text, sender) {
  }
  chatBox.appendChild(messageDiv);
  chatBox.scrollTop = chatBox.scrollHeight;
+ return messageDiv;
 }
+
+function fallbackFlightEstimate({ origin, destination, dates }) {
+  // super rough ranges; let LLM handle details
+  return { type: "ESTIMATE", range_usd: [250, 650], notes: "Typical domestic RT range; varies by airline and booking time." };
+}
+
 
 
 
@@ -132,127 +242,51 @@ function mdYToISO(mdY) {
 
 
 
-function normalizeDatesForBackend(datesStr) {
- // if it's already ISO, leave it
- if (/\d{4}-\d{2}-\d{2}/.test(datesStr)) return datesStr;
 
 
 
 
- // expected "M/D/YYYY - M/D/YYYY"
- const parts = datesStr.split("-").map(s => s.trim());
- if (parts.length < 2) return datesStr;
 
+async function searchFlights(messageFromUser = "") {
+  const destination = document.getElementById("destination").value.trim();
+  const datesRaw = document.getElementById("dates").value.trim();
+  const dates = normalizeDatesForBackend(datesRaw);
 
+  const budgetRaw = document.getElementById("budget").value.trim();
+  const budget = parseBudgetMax(budgetRaw);
 
+  const transport = "";
+  const origin = document.getElementById("origin").value.trim();
 
- const startISO = mdYToISO(parts[0]);
- const endISO = mdYToISO(parts[1]);
+  const payload = {
+    origin,
+    destination,
+    dates,
+    budget,
+    transport,
+    message: messageFromUser, // ✅ passed in, not read from DOM
+  };
 
+  const res = await fetch("/api/flights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
+  const data = await res.json();
+  console.log("flight results:", data);
 
+  if (data.error) {
+    const msg = data.message ? ` (${data.message})` : "";
+    displayMessage("❌ " + data.error + msg, "bot");
+    return data; // ✅ still return for LLM fallback
+  }
 
- if (!startISO || !endISO) return datesStr;
-
-
-
-
- return `${startISO} to ${endISO}`;
+  displayMessage("✈️ Found " + (data.offers?.length ?? 0) + " flights!", "bot");
+  renderFlights(data);
+  return data;
 }
 
-
-
-
-function parseBudgetMax(budgetValue) {
- // "2000-4000" -> "4000"
- if (!budgetValue) return "";
- if (budgetValue.includes("+")) return ""; // treat "No Budget" as no max
-
-
-
-
- const parts = budgetValue.split("-").map(s => s.trim());
- if (parts.length === 2 && parts[1]) return parts[1];
-
-
-
-
- // if it's already a number
- return budgetValue;
-}
-
-
-
-
-const userInput = document.getElementById('userInput');
-async function searchFlights() {
- const destination = document.getElementById('destination').value.trim();
- const datesRaw = document.getElementById('dates').value.trim();
- const dates = normalizeDatesForBackend(datesRaw);
-
-
-
-
- const budgetRaw = document.getElementById('budget').value.trim();
- const budget = parseBudgetMax(budgetRaw);
- const transport = document.getElementById('transport').value.trim();
- const message = userInput.value.trim();
-
-
-
-
- const origin = "BOS";
-
-
-
-
- const payload = {
-   origin,
-   destination,
-   dates,
-   budget,
-   transport,
-   message
- };
-
-
-
-
- const res = await fetch("/api/flights", {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify(payload),
- });
-
-
-
-
- const data = await res.json();
- console.log("flight results:", data);
-
-
-
-
- 
- if (data.error) {
-   const msg = data.message ? ` (${data.message})` : "";
-   displayMessage("❌ " + data.error + msg, "bot");
-   return;
- }
-
-
-
-
- // ✅ If no error, continue rendering flights
- displayMessage("✈️ Found " + data.offers.length + " flights!", "bot");
- renderFlights(data);
-
-
-
-
-
- // TODO: format flight cards here
-}
 
 //Hotel
 
@@ -292,57 +326,15 @@ async function searchHotels() {
   if (data.error) {
     displayMessage("🏨 ❌ " + data.error, "bot");
     console.log("hotel error details:", data.details);
-    return;
+    return data;
   }
 
   displayMessage("🏨 Found " + (data.hotels?.length || 0) + " hotels!", "bot");
   renderHotels(data);
-}
-
-/*
-async function searchHotels(flightCostMaybe) {
-  const destination = document.getElementById('destination').value.trim();
-  const datesRaw = document.getElementById('dates').value.trim();
-  const dates = normalizeDatesForBackend(datesRaw);
-
-  const budgetRaw = document.getElementById('budget').value.trim();
-  const budget = parseBudgetMax(budgetRaw);
-
-  if (!destination || !dates) return;
-
-  setHotelStatus("Searching hotels...");
-
-  const payload = {
-    destination,
-    dates,
-    budget,
-    // optional: if you pass flight cost later
-    flight_cost: flightCostMaybe ?? ""
-  };
-
-  const res = await fetch("/api/hotels", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json();
-  console.log("hotel results:", data);
-
-  if (!res.ok || data.error) {
-  const details = data.details ? JSON.stringify(data.details, null, 2) : "";
-  displayMessage("🏨 ❌ " + (data.error || "Hotel request failed"), "bot");
-  if (details) displayMessage("<pre>" + details + "</pre>", "bot");
-  setHotelStatus("");
-  return;
+  return data;
 }
 
 
-  setHotelStatus(`Found ${data.hotels?.length ?? 0} hotels`);
-  displayMessage(`🏨 Found ${(data.hotels?.length ?? 0)} hotels!`, "bot");
-  renderHotels(data);
-}
-*/
 function renderHotels(data) {
   const container = document.getElementById("hotelResults");
   if (!container) return;
@@ -405,14 +397,71 @@ function renderHotels(data) {
   });
 }
 
+function renderItinerary(days) {
+  const container = document.getElementById("itineraryResults");
+  if (!container) return;
 
+  container.innerHTML = "";
 
+  if (!days || days.length === 0) {
+    container.innerHTML = `<div class="flight-empty">No itinerary generated.</div>`;
+    return;
+  }
 
+  days.forEach(day => {
+    const card = document.createElement("div");
+    card.className = "itinerary-day-card";
 
+    let items = "";
+    (day.schedule || []).forEach(item => {
+      items += `
+        <li>
+          <strong>${item.time}:</strong> ${item.activity}
+        </li>
+      `;
+    });
 
+    card.innerHTML = `
+      <h3>Day ${day.day} — ${day.title}</h3>
+      <ul>${items}</ul>
+    `;
 
+    container.appendChild(card);
+  });
+}
 
+function printItineraryToChat(days) {
+  if (!Array.isArray(days) || days.length === 0) {
+    displayMessage("❌ No itinerary was generated.", "bot");
+    return;
+  }
 
+  let text = "";
+
+  days.forEach((dayObj, idx) => {
+    const dayNumber = dayObj.day ?? (idx + 1);
+
+    let title = (dayObj.title ?? "").trim();
+    title = title.replace(/^day\s*\d+\s*[-—:]?\s*/i, "");
+
+    text += `\n🗓️ Day ${dayNumber}${title ? " — " + title : ""}\n`;
+
+    const schedule = Array.isArray(dayObj.schedule) ? dayObj.schedule : [];
+
+    schedule.forEach(item => {
+      const time = item.time || "";
+      const activity = item.activity || "";
+      text += `• ${time}: ${activity}\n`;
+    });
+
+    text += "\n";
+  });
+
+  displayMessage(text.replace(/\n/g, "<br>"), "bot");
+
+  // ✅ Tell the user it’s finished
+  displayMessage("✅ Done! Your itinerary is ready.", "bot");
+}
 
 
 function generateItinerary(destination, dates, budget, transport, interests, userMessage) {
